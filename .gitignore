@@ -1,4 +1,6 @@
 /bin/
+
 *cache*
 *Cache*
 *Makefile*
+*.log
