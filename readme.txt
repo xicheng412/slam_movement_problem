@@ -1,3 +1,7 @@
+安装的包
+opencv:  libopencv-dev 
+matrix:  libsuitesparse-dev
+
 这个是我把自己以前写的slam的运行环境改了的。其中原来有调用 g20， eigen3 ，PCL 等一些库的链接。但是文件已经被我删了，并没有不影响我们的实验。
 
 主要代码在src 中 
