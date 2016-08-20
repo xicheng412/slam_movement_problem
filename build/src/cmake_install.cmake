@@ -1,4 +1,4 @@
-# Install script for directory: /home/kim/optical_flow/src
+# Install script for directory: /home/pi/Documents/SLAM/slam_git/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

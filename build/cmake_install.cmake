@@ -1,4 +1,4 @@
-# Install script for directory: /home/kim/optical_flow
+# Install script for directory: /home/pi/Documents/SLAM/slam_git
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,7 +34,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/kim/optical_flow/build/src/cmake_install.cmake")
+  include("/home/pi/Documents/SLAM/slam_git/build/src/cmake_install.cmake")
 
 endif()
 
@@ -44,7 +44,7 @@ else()
   set(CMAKE_INSTALL_MANIFEST "install_manifest.txt")
 endif()
 
-string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
-       "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/kim/optical_flow/build/${CMAKE_INSTALL_MANIFEST}"
-     "${CMAKE_INSTALL_MANIFEST_CONTENT}")
+file(WRITE "/home/pi/Documents/SLAM/slam_git/build/${CMAKE_INSTALL_MANIFEST}" "")
+foreach(file ${CMAKE_INSTALL_MANIFEST_FILES})
+  file(APPEND "/home/pi/Documents/SLAM/slam_git/build/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
+endforeach()

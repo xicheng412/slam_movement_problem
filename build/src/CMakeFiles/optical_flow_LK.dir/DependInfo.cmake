@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/kim/optical_flow/src/optical_flow_LK.cpp" "/home/kim/optical_flow/build/src/CMakeFiles/optical_flow_LK.dir/optical_flow_LK.cpp.o"
+  "/home/pi/Documents/SLAM/slam_git/src/optical_flow_LK.cpp" "/home/pi/Documents/SLAM/slam_git/build/src/CMakeFiles/optical_flow_LK.dir/optical_flow_LK.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -15,8 +15,7 @@ set(CMAKE_TARGET_LINKED_INFO_FILES
 # The include file search paths:
 set(CMAKE_C_TARGET_INCLUDE_PATH
   "../include"
-  "/usr/local/include/opencv"
-  "/usr/local/include"
+  "/usr/include/opencv"
   "/usr/include/suitesparse"
   )
 set(CMAKE_CXX_TARGET_INCLUDE_PATH ${CMAKE_C_TARGET_INCLUDE_PATH})
