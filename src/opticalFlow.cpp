@@ -9,60 +9,119 @@
 using namespace std;
 using namespace cv;
 
+void recorde_feature_points();
+void get_accept_points();
+void draw_lines(Mat &output);
 void tracking(Mat &frame, Mat &output);
 void getrandompoint(Mat &img,int iter);
 bool addbackgroundPoints();
 bool addNewPoints();
-bool acceptTrackedPoint(int i);
+bool is_accept_TrackedPoint(int i);
+void halfsize(Mat &img,Mat &output);
 
 string window_name = "optical flow tracking";
-Mat gray;	
-Mat gray_prev;	
-vector<Point2f> points[2];	
-vector<Point2f> initial;	
+Mat gray;
+Mat gray_prev;
+vector<Point2f> track_point_start;
+vector<Point2f> frame_point_before;
+vector<Point2f> frame_point_after;
+
 vector <Point2f> features;
-vector<Point2f> random_points;
-vector<Point2f> background_points;
 vector<float > norm_of_features;
-int maxCount = 500;
-double qLevel = 0.01;	
-double minDist = 10.0;	
-vector<uchar> status;	
+
+int maxCount = 200;
+double qLevel = 0.01;
+double minDist = 10.0;
+vector<uchar> status;
 vector<float> err;
+
 int main()
 {
 	Mat frame;
 	Mat result;
+    cout << "--start--" <<endl;
 
-// 	CvCapture* capture = cvCaptureFromCAM( -1 );	
+	// CvCapture* capture = cvCaptureFromCAM( -1 );
 	// VideoCapture capture("/home/kim/slam/src/bike.avi");
 	VideoCapture capture(0);
+    cout << "video capture 0" << endl;
 
-	if(capture.isOpened())	
+	if(capture.isOpened())
 	{
-		while(true)
-		{
-// 			frame = cvQueryFrame( capture );	
+        cout << "video is opened" << endl;
+		while(true){
+// 			frame = cvQueryFrame( capture );
 			capture >> frame;
-
-			if(!frame.empty())
-			{ 
+			
+			halfsize(frame,frame);
+			if(!frame.empty()){
 				tracking(frame, result);
 			}
-			else
-			{ 
+			else{
 				printf(" --(!) No captured frame -- Break!");
 				break;
 			}
 
-			int c = waitKey(100);
-			if( (char)c == 27 )
-			{
-				break; 
-			} 
+			int c = waitKey(30);
+			if( (char)c == 27 ){
+				break;
+			}
 		}
 	}
+	else{
+		cout << "cam not found" << endl;
+	}
 	return 0;
+}
+
+//scale image to half size
+void halfsize(Mat &img,Mat &output){
+	int proportion2=1;
+	resize(img,output,Size(img.cols>>proportion2,img.rows>>proportion2),0.5,0.5,INTER_CUBIC);
+}
+
+void recorde_feature_points(){
+		//feature points
+		goodFeaturesToTrack(gray, features, maxCount, qLevel, minDist);
+		for (vector<Point2f>::iterator iter= features.begin(); iter != features.end(); ++iter){
+			frame_point_before.push_back(*iter);
+			track_point_start.push_back(*iter);
+		}
+}
+
+void get_accept_points(){
+	
+	int k = 0;
+	int length=frame_point_after.size();
+	for (int i=0; i<length; i++)
+	{
+		// criterion for judgement
+		if (is_accept_TrackedPoint(i))
+		{
+			track_point_start[k] = track_point_start[i];
+			frame_point_after[k] = frame_point_after[i];
+			k++;
+		}
+	}
+
+	frame_point_after.resize(k);
+	track_point_start.resize(k);
+}
+void draw_points(Mat &output){
+	int length=frame_point_before.size();
+	for (int i=0; i<length; i++){
+		circle(output, frame_point_before[i], 2, Scalar(50,200,0), -1);
+	}
+}
+
+void draw_lines(Mat &output){
+	int length=frame_point_after.size();
+	for (int i=0; i<length; i++)
+	{
+		line(output, track_point_start[i], frame_point_after[i], Scalar(0, 0, 255));
+		norm_of_features.push_back(norm(Mat(track_point_start[i]), Mat(frame_point_after[i]), NORM_L2)) ;
+		circle(output, frame_point_after[i], 2, Scalar(255, 0, 0), -1);
+	}
 }
 
 void tracking(Mat &frame, Mat &output)
@@ -70,84 +129,23 @@ void tracking(Mat &frame, Mat &output)
 	cvtColor(frame, gray, CV_BGR2GRAY);
 	frame.copyTo(output);
 
-	// squre of background points
-	// int intr = 50;
-	// if(random_points.size() < intr*intr)
-	// {
-	// 	// random_points.push_back(Point2f(output.size().width,output.size().height));
-	// 	for(size_t i = 0 ; i < intr ; i++)
-	// 	{
-	// 		for(size_t j = 0; j < intr ; j++)
-	// 		{
-	// 			random_points.push_back(Point2f((intr-i)*(output.size().width/intr),(intr-j)*(output.size().height/intr)));
-	// 			// cout<<"random_points["<<i*intr+j<<"]:"<<random_points[i*intr+j]<<endl;
-	// 		}
-	// 	}
-	// }
-
-	// calcOpticalFlowPyrLK(gray_prev,gray,random_points,background_points,status, err);
-
-
-	if (addNewPoints())
-	{
-		//feature points
-		goodFeaturesToTrack(gray, features, maxCount, qLevel, minDist);
-		// points[0].insert(points[0].end(), random_points.begin(), random_points.end());
-		points[0].insert(points[0].end(), features.begin(), features.end());
-		// cout<<"points[0]"<<points[0]<<endl;
-		// initial.insert(initial.end(), random_points.begin(), random_points.end());
-		initial.insert(initial.end(), features.begin(), features.end());
-	}
-
-	if (gray_prev.empty())
-	{
+	//ensure when init ,frame is not empty
+	if (gray_prev.empty()){
 		gray.copyTo(gray_prev);
 	}
-
-	calcOpticalFlowPyrLK(gray_prev, gray, points[0], points[1], status, err);
-// delete the wrong points
-	// cout<<"test_1"<<endl;
-	//random points
-	int k = 0;
-	for (size_t i=0; i<points[1].size(); i++)
-	{
-		if (acceptTrackedPoint(i))  // criterion for judgement
-		{
-			initial[k] = initial[i];
-			points[1][k++] = points[1][i];
-		}
-
+	
+	if(addNewPoints()){
+		recorde_feature_points();
 	}
 
-	points[1].resize(k);
-	initial.resize(k);
-	for (size_t i=0; i<points[1].size(); i++)
-	{
-		line(output, initial[i], points[1][i], Scalar(0, 0, 255));
-		// cout<<"initial[~]"<<initial[i]<<endl;
-		// cout<<"points[1][~]"<<points[1][i]<<endl;
-		// cout<<"length of the line:"<< norm(Mat(initial[i]), Mat(points[1][i]), NORM_L2)<<endl;
-		norm_of_features.push_back(norm(Mat(initial[i]), Mat(points[1][i]), NORM_L2)) ;
-		// cout<<"norm_of_features:"<<norm_of_features<<endl;
-		circle(output, points[1][i], 3, Scalar(255, 0, 0), -1);
-	}
+	calcOpticalFlowPyrLK(gray_prev, gray, frame_point_before, frame_point_after, status, err);
 
-	// Mat gray_prev_resize
-	// Mat gray_resize
-	// Mat flow
-	// resize(gray_prev,gray_prev_resize,size(64,48),0,0,CV_INTER_LINEAR);
-	// resize(gray,gray_resize,size(64,48),0,0,CV_INTER_LINEAR);
-
-
-	// calcOpticalFlowFarneback(gray_prev_resize, gray_resize, flow, 0.5, 3, 15, 3, 5, 1.2, 0); 
-	// for(size_t i = 0; i<flow.size();i++)
-	// {
-
-	// 	line(output, random_points[i], background_points[i], Scalar(0, 0, 255));
-	// 	circle(output, flow[i], 3, Scalar(255, 255, 0), -1);
-	// }
-
-	swap(points[1], points[0]);
+	get_accept_points();
+	
+	draw_points(output);
+	draw_lines(output);
+	
+	swap(frame_point_before, frame_point_after);
 	swap(gray_prev, gray);
 
 	imshow(window_name, output);
@@ -155,15 +153,21 @@ void tracking(Mat &frame, Mat &output)
 
 bool addNewPoints()
 {
-	return points[0].size() <= 10;
+	return frame_point_before.size() <= 10;
 }
-// bool addbackgroundPoints()
-// {
-// 	return ;
-// }
 
-bool acceptTrackedPoint(int i)
+bool is_accept_TrackedPoint(int i)
 {
-	return status[i] && ((abs(points[0][i].x - points[1][i].x) + abs(points[0][i].y - points[1][i].y)) > 2);
+	//status accept
+	if(status[i]){
+		//move distance > 2
+		float dx=abs(frame_point_before[i].x - frame_point_after[i].x);
+		float dy=abs(frame_point_before[i].y - frame_point_after[i].y);
+		if((dx+dy) > 2){
+			return true;
+		}
+		
+	}
+	return false;
 }
 
