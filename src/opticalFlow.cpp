@@ -23,13 +23,14 @@ string window_name = "optical flow tracking";
 Mat gray;
 Mat gray_prev;
 vector<Point2f> track_point_start;
+vector<Point2f> track_point_end;
 vector<Point2f> frame_point_before;
 vector<Point2f> frame_point_after;
 
 vector <Point2f> features;
 vector<float > norm_of_features;
 
-int maxCount = 200;
+int maxCount = 100;
 double qLevel = 0.01;
 double minDist = 10.0;
 vector<uchar> status;
@@ -119,9 +120,14 @@ void draw_lines(Mat &output){
 	for (int i=0; i<length; i++)
 	{
 		line(output, track_point_start[i], frame_point_after[i], Scalar(0, 0, 255));
-		norm_of_features.push_back(norm(Mat(track_point_start[i]), Mat(frame_point_after[i]), NORM_L2)) ;
+		//norm_of_features.push_back(norm(Mat(track_point_start[i]), Mat(frame_point_after[i]), NORM_L2)) ;
 		circle(output, frame_point_after[i], 2, Scalar(255, 0, 0), -1);
 	}
+}
+void draw_infomation(Mat &output){
+	char str_i[50];
+	sprintf(str_i,"all:%d move:%d start:%d",frame_point_before.size(),frame_point_after.size(),track_point_start.size());
+	putText(output, str_i, cvPoint( 20, 20),CV_FONT_HERSHEY_COMPLEX,0.5,Scalar(0,100,100));
 }
 
 void tracking(Mat &frame, Mat &output)
@@ -133,10 +139,8 @@ void tracking(Mat &frame, Mat &output)
 	if (gray_prev.empty()){
 		gray.copyTo(gray_prev);
 	}
-	
-	if(addNewPoints()){
-		recorde_feature_points();
-	}
+
+	recorde_feature_points();
 
 	calcOpticalFlowPyrLK(gray_prev, gray, frame_point_before, frame_point_after, status, err);
 
@@ -144,6 +148,7 @@ void tracking(Mat &frame, Mat &output)
 	
 	draw_points(output);
 	draw_lines(output);
+	draw_infomation(output);
 	
 	swap(frame_point_before, frame_point_after);
 	swap(gray_prev, gray);
@@ -161,12 +166,11 @@ bool is_accept_TrackedPoint(int i)
 	//status accept
 	if(status[i]){
 		//move distance > 2
-		float dx=abs(frame_point_before[i].x - frame_point_after[i].x);
-		float dy=abs(frame_point_before[i].y - frame_point_after[i].y);
-		if((dx+dy) > 2){
+		float dx=frame_point_before[i].x - frame_point_after[i].x;
+		float dy=frame_point_before[i].y - frame_point_after[i].y;
+		if((dx*dx+dy*dy) > 3*3){
 			return true;
 		}
-		
 	}
 	return false;
 }
