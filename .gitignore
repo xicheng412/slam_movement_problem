@@ -1,5 +1,6 @@
 /bin/
-
+/build/CMakeFiles/
+/build/src/
 *cache*
 *Cache*
 *Makefile*
