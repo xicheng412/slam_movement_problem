@@ -24,6 +24,7 @@ Mat gray;
 Mat gray_prev;
 vector<Point2f> track_point_start;
 vector<Point2f> track_point_end;
+
 vector<Point2f> frame_point_before;
 vector<Point2f> frame_point_after;
 
@@ -84,44 +85,37 @@ void halfsize(Mat &img,Mat &output){
 void recorde_feature_points(){
 		//feature points
 		goodFeaturesToTrack(gray, features, maxCount, qLevel, minDist);
+		frame_point_before.clear();
 		for (vector<Point2f>::iterator iter= features.begin(); iter != features.end(); ++iter){
 			frame_point_before.push_back(*iter);
-			track_point_start.push_back(*iter);
 		}
 }
 
 void get_accept_points(){
-	
 	int k = 0;
 	int length=frame_point_after.size();
 	for (int i=0; i<length; i++)
 	{
-		// criterion for judgement
 		if (is_accept_TrackedPoint(i))
 		{
-			track_point_start[k] = track_point_start[i];
-			frame_point_after[k] = frame_point_after[i];
-			k++;
+			track_point_start.push_back(frame_point_before[i]);
+			track_point_end.push_back(frame_point_after[i]);
 		}
 	}
-
-	frame_point_after.resize(k);
-	track_point_start.resize(k);
 }
 void draw_points(Mat &output){
-	int length=frame_point_before.size();
+	int length=track_point_end.size();
 	for (int i=0; i<length; i++){
 		circle(output, frame_point_before[i], 2, Scalar(50,200,0), -1);
 	}
 }
 
 void draw_lines(Mat &output){
-	int length=frame_point_after.size();
+	int length=track_point_end.size();
 	for (int i=0; i<length; i++)
 	{
-		line(output, track_point_start[i], frame_point_after[i], Scalar(0, 0, 255));
-		//norm_of_features.push_back(norm(Mat(track_point_start[i]), Mat(frame_point_after[i]), NORM_L2)) ;
-		circle(output, frame_point_after[i], 2, Scalar(255, 0, 0), -1);
+		line(output, track_point_start[i], track_point_end[i], Scalar(0, 0, 255));
+		circle(output, track_point_end[i], 2, Scalar(255, 0, 0), -1);
 	}
 }
 void draw_infomation(Mat &output){
@@ -153,6 +147,9 @@ void tracking(Mat &frame, Mat &output)
 	swap(frame_point_before, frame_point_after);
 	swap(gray_prev, gray);
 
+	track_point_end.clear();
+	track_point_start.clear();
+	
 	imshow(window_name, output);
 }
 
