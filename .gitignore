@@ -5,3 +5,4 @@
 *Cache*
 *Makefile*
 *.log
+*.o
