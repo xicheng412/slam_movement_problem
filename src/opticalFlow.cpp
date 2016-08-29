@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <cstdlib>
 
 using namespace std;
 using namespace cv;
@@ -18,44 +19,87 @@ bool addbackgroundPoints();
 bool addNewPoints();
 bool is_accept_TrackedPoint(int i);
 void halfsize(Mat &img,Mat &output);
+void clear_used_frame_data();
+void calc_movement();
 
 string window_name = "optical flow tracking";
 Mat gray;
 Mat gray_prev;
 vector<Point2f> track_point_start;
 vector<Point2f> track_point_end;
+vector<Point2f> track_point_direction;
 
 vector<Point2f> frame_point_before;
 vector<Point2f> frame_point_after;
 
 vector <Point2f> features;
-vector<float > norm_of_features;
+vector<float> norm_of_features;
+Point2f frame_direction;
 
-int maxCount = 100;
+int maxCount = 50;
 double qLevel = 0.01;
 double minDist = 10.0;
 vector<uchar> status;
 vector<float> err;
+float **two_points_distance;
+
+//malloc 2d array
+template <typename T>  
+T** new_Array2D(int row, int col)  
+{  
+    int size = sizeof(T);  
+    int point_size = sizeof(T*);  
+    T **arr = (T **) malloc(point_size * row + size * row * col);  
+    if (arr != NULL)  
+    {     
+        T *head = (T*)((int)arr + point_size * row);  
+        for (int i = 0; i < row; ++i)  
+        {  
+            arr[i] =  (T*)((int)head + i * col * size);  
+            for (int j = 0; j < col; ++j)  
+                new (&arr[i][j]) T;  
+        }  
+    }  
+    return (T**)arr;  
+}  
+//release 2d array 
+template <typename T>  
+void delete_Array2D(T **arr, int row, int col)  
+{  
+    for (int i = 0; i < row; ++i)  
+        for (int j = 0; j < col; ++j)  
+            arr[i][j].~T();  
+    if (arr != NULL)  
+        free((void**)arr);  
+}  
+
+void init_main(){
+	//init 2 points distance 2d array
+	two_points_distance=new_Array2D<float>(maxCount,maxCount);
+}
 
 int main()
 {
 	Mat frame;
 	Mat result;
+	init_main();
+	
     cout << "--start--" <<endl;
 
 	// CvCapture* capture = cvCaptureFromCAM( -1 );
 	// VideoCapture capture("/home/kim/slam/src/bike.avi");
 	VideoCapture capture(0);
     cout << "video capture 0" << endl;
-
+	
 	if(capture.isOpened())
 	{
         cout << "video is opened" << endl;
-		while(true){
-// 			frame = cvQueryFrame( capture );
+		while(capture.isOpened()){
+			//frame = cvQueryFrame( capture );
 			capture >> frame;
 			
 			halfsize(frame,frame);
+			
 			if(!frame.empty()){
 				tracking(frame, result);
 			}
@@ -103,6 +147,8 @@ void get_accept_points(){
 		}
 	}
 }
+
+//draw info
 void draw_points(Mat &output){
 	int length=track_point_end.size();
 	for (int i=0; i<length; i++){
@@ -118,14 +164,72 @@ void draw_lines(Mat &output){
 		circle(output, track_point_end[i], 2, Scalar(255, 0, 0), -1);
 	}
 }
+
 void draw_infomation(Mat &output){
 	char str_i[50];
-	sprintf(str_i,"all:%d move:%d start:%d",frame_point_before.size(),frame_point_after.size(),track_point_start.size());
-	putText(output, str_i, cvPoint( 20, 20),CV_FONT_HERSHEY_COMPLEX,0.5,Scalar(0,100,100));
+	sprintf(str_i,"all:%d move:%d",frame_point_before.size(),track_point_start.size());
+	putText(output, str_i, cvPoint( 20, 20),CV_FONT_HERSHEY_COMPLEX,0.5,Scalar(50,0,20));
+	sprintf(str_i,"direction x:%4.3f  y:%4.3f",frame_direction.x,frame_direction.y);
+	putText(output, str_i, cvPoint( 20, 60),CV_FONT_HERSHEY_COMPLEX,0.5,Scalar(20,0,40));
 }
 
-void tracking(Mat &frame, Mat &output)
-{
+//calc 2 point distance
+float points_distance(Point2f point1,Point2f point2){
+	float dx=point2.x-point1.x;
+	float dy=point2.y-point1.y;
+	return sqrt(dx*dx+dy*dy);
+}
+
+//calculate all points distance with other points
+void calc_points_distance(){
+	int points_count=track_point_end.size();
+	for(int m =0; m<points_count;m++){
+		for(int n=0;n<points_count;n++){
+				two_points_distance[m][n]=points_distance(track_point_end[m],track_point_start[n]);
+		}
+	}
+}
+
+//weight is the distance from the trackpoint
+//sum the other vector with weight,to get the direction
+Point2f sum_with_weight(int m){
+	float tempx,tempy;
+	int points_count=track_point_end.size();
+	Point2f res=Point2f(0,0);
+	for(int n=0;n<points_count;n++){
+		tempx=track_point_direction[m].x/two_points_distance[m][n];
+		tempy=track_point_direction[m].y/two_points_distance[m][n];
+		res+=Point2f(tempx,tempy);
+	}
+	return res;
+} 
+
+void sum_all_with_weight(){
+	
+}
+
+//get all points direction
+void get_point_direction(){
+	Point2f tempp2f,avgp2f;
+	int length=track_point_end.size();
+	for(int i=0; i<length; i++){
+		tempp2f=track_point_end[i]-track_point_start[i];
+		track_point_direction.push_back(tempp2f);
+	}
+}
+
+void calc_movement(){
+	get_point_direction();
+	
+	Point2f avgp2f;
+	int length=track_point_end.size();
+	for(int i=0; i<length; i++){
+		avgp2f+=track_point_direction[i];
+	}
+	frame_direction=Point2f(avgp2f.x/length,avgp2f.y/length);
+}
+
+void tracking(Mat &frame, Mat &output){
 	cvtColor(frame, gray, CV_BGR2GRAY);
 	frame.copyTo(output);
 
@@ -133,36 +237,44 @@ void tracking(Mat &frame, Mat &output)
 	if (gray_prev.empty()){
 		gray.copyTo(gray_prev);
 	}
-
-	recorde_feature_points();
-
-	calcOpticalFlowPyrLK(gray_prev, gray, frame_point_before, frame_point_after, status, err);
-
-	get_accept_points();
 	
+	//optical flow
+	recorde_feature_points();
+	calcOpticalFlowPyrLK(gray_prev, gray, frame_point_before, frame_point_after, status, err);
+	
+	//calc movement
+	get_accept_points();
+	calc_movement();
+	
+	//draw text and lines
 	draw_points(output);
 	draw_lines(output);
 	draw_infomation(output);
+
+	//show pic
+	imshow(window_name, output);
+	
+	//clear used data
+	clear_used_frame_data();
+}
+
+
+void clear_used_frame_data(){
+	frame_point_before.clear();
+	//gray_prev.clear();
 	
 	swap(frame_point_before, frame_point_after);
 	swap(gray_prev, gray);
 
 	track_point_end.clear();
 	track_point_start.clear();
-	
-	imshow(window_name, output);
-}
-
-bool addNewPoints()
-{
-	return frame_point_before.size() <= 10;
 }
 
 bool is_accept_TrackedPoint(int i)
 {
 	//status accept
 	if(status[i]){
-		//move distance > 2
+		//move distance > 3
 		float dx=frame_point_before[i].x - frame_point_after[i].x;
 		float dy=frame_point_before[i].y - frame_point_after[i].y;
 		if((dx*dx+dy*dy) > 3*3){
