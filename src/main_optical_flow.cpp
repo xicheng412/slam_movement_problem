@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "array_2d_template.h"
+
+
 using namespace std;
 using namespace cv;
 
@@ -43,39 +46,13 @@ vector<uchar> status;
 vector<float> err;
 float **two_points_distance;
 
-//malloc 2d array
-template <typename T>  
-T** new_Array2D(int row, int col)  
-{  
-    int size = sizeof(T);  
-    int point_size = sizeof(T*);  
-    T **arr = (T **) malloc(point_size * row + size * row * col);  
-    if (arr != NULL)  
-    {     
-        T *head = (T*)((int)arr + point_size * row);  
-        for (int i = 0; i < row; ++i)  
-        {  
-            arr[i] =  (T*)((int)head + i * col * size);  
-            for (int j = 0; j < col; ++j)  
-                new (&arr[i][j]) T;  
-        }  
-    }  
-    return (T**)arr;  
-}  
-//release 2d array 
-template <typename T>  
-void delete_Array2D(T **arr, int row, int col)  
-{  
-    for (int i = 0; i < row; ++i)  
-        for (int j = 0; j < col; ++j)  
-            arr[i][j].~T();  
-    if (arr != NULL)  
-        free((void**)arr);  
-}  
-
 void init_main(){
 	//init 2 points distance 2d array
 	two_points_distance=new_Array2D<float>(maxCount,maxCount);
+}
+
+void exit_main(){
+	delete_Array2D(two_points_distance,maxCount,maxCount);
 }
 
 int main()
