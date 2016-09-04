@@ -5,10 +5,8 @@
 
 #include <iostream>
 #include <cstdio>
-#include <cstdlib>
 
 #include "array_2d_template.h"
-
 
 using namespace std;
 using namespace cv;
@@ -26,8 +24,10 @@ void clear_used_frame_data();
 void calc_movement();
 
 string window_name = "optical flow tracking";
+
 Mat gray;
 Mat gray_prev;
+
 vector<Point2f> track_point_start;
 vector<Point2f> track_point_end;
 vector<Point2f> track_point_direction;
@@ -94,6 +94,8 @@ int main()
 	else{
 		cout << "cam not found" << endl;
 	}
+	
+	exit_main();
 	return 0;
 }
 
